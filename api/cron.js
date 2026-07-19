@@ -18,7 +18,7 @@ export default async function handler(request, response) {
 
     // 3. Écriture du fichier sur le Blob Storage
     const blob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
-      access: 'public',
+      access: 'private',
       addRandomSuffix: false
     });
 
