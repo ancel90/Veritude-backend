@@ -1,10 +1,14 @@
-JSON
-
 {
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
+    "crons": [
+      {
+        "path": "/api/cron",
+        "schedule": "0 0 * * *"
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/cron",
+        "destination": "/api/cron.js"
+      }
+    ]
+  }
