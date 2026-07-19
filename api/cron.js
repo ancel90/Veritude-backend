@@ -5,34 +5,40 @@ const parser = new Parser();
 const RSS_URL = 'https://www.cnews.fr/rss/categorie/faits%20divers';
 
 export default async function handler(request, response) {
-  // 1. En-têtes CORS sécurisés et positionnés immédiatement
+  // En-têtes CORS universels
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Si le navigateur fait juste une vérification (OPTIONS), on répond "OK" tout de suite
   if (request.method === 'OPTIONS') {
     return response.status(200).end();
   }
 
   try {
-    // 2. Récupération du flux RSS
-    const feed = await parser.parseURL(RSS_URL);
+    // 1. On télécharge le flux RSS via un fetch natif (beaucoup plus stable sur Vercel)
+    const rssResponse = await fetch(RSS_URL);
+    if (!rssResponse.ok) {
+      throw new Error(`Erreur CNews: ${rssResponse.status} ${rssResponse.statusText}`);
+    }
+    const xmlData = await rssResponse.text();
+
+    // 2. On demande au parser de lire la chaîne XML reçue
+    const feed = await parser.parseString(xmlData);
     
-    // 3. Formatage
+    // 3. Formatage des articles
     const formattedNews = feed.items.map((item, index) => ({
       id: (index + 1).toString(),
       titre: item.title || '',
       textecomplet: item.contentSnippet || item.content || ''
     }));
 
-    // 4. Écriture sur le Blob Storage (On repasse en privé comme demandé)
+    // 4. Écriture sur le Blob Storage
     const blob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
       access: 'private',
       addRandomSuffix: false
     });
 
-    // 5. Envoi de la réponse de succès
+    // 5. Réponse
     return response.status(200).json({ 
       success: true, 
       message: 'Flux RSS synchronisé avec succès !',
@@ -40,7 +46,7 @@ export default async function handler(request, response) {
     });
 
   } catch (error) {
-    // En cas d'erreur, on s'assure de ne renvoyer qu'UNE SEULE réponse propre
+    // Si ça coince, on renvoie l'erreur proprement au lieu de crasher anonymement
     return response.status(500).json({ 
       success: false, 
       error: error.message 
