@@ -1,0 +1,25 @@
+{
+  "name": "veritude-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ancel90/Veritude-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ancel90/Veritude-backend/issues"
+  },
+  "homepage": "https://github.com/ancel90/Veritude-backend#readme",
+  "dependencies": {
+    "@vercel/blob": "^2.6.1",
+    "rss-parser": "^3.13.0"
+  }
+}
