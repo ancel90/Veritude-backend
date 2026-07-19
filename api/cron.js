@@ -25,7 +25,7 @@ export default async function handler(request, response) {
       textecomplet: item.contentSnippet || item.content || ''
     }));
 
-    // 3. Écriture sur le Blob Storage en mode PUBLIC
+    // 3. Écriture sur le Blob Storage en mode PUBLIC  
     const blob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
       access: 'public',
       addRandomSuffix: false
