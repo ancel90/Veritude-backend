@@ -29,6 +29,7 @@ export default async function handler(request, response) {
     const blob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
       access: 'public',
       addRandomSuffix: false,
+      allowOverwrite: true,
       storeId: process.env.BLOB_STORE_ID // <-- On utilise votre variable ici !
     });
 
