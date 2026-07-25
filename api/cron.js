@@ -91,7 +91,7 @@ export default async function handler(request, response) {
 
   try {
     // ==========================================
-    // 1. TRAITEMENT DES ACTUALITÉS (CNews + Dramatisation du 1er article via Gemini)
+    // 1. TRAITEMENT DES ACTUALITÉS (CNews + Dramatisation)
     // ==========================================
     const feed = await parser.parseURL(RSS_URL);
 
@@ -101,8 +101,10 @@ export default async function handler(request, response) {
       textecomplet: item.contentSnippet || item.content || ''
     }));
 
-    // Si la clé API Gemini est disponible et qu'il y a au moins un article
-    if (process.env.GEMINI_API_KEY && formattedNews.length > 0) {
+    // Diagnostic de la clé d'environnement
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY manquante dans les variables Vercel !");
+    } else if (formattedNews.length > 0) {
       try {
         const premierArticle = formattedNews[0];
         const promptText = `Réécris le titre et le texte suivant dans un style extrêmement dramatique, solennel, haletant et saisissant. 
@@ -118,8 +120,9 @@ Exemple de format:
   "textecomplet": "..."
 }`;
 
+        // Utilisation du modèle gemini-1.5-flash (nom stable universel)
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -131,27 +134,24 @@ Exemple de format:
         );
 
         const geminiData = await geminiRes.json();
-        const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (rawText) {
-          const versionDramatique = JSON.parse(rawText);
-          if (versionDramatique.titre && versionDramatique.textecomplet) {
-            formattedNews[0].titre = versionDramatique.titre;
-            formattedNews[0].textecomplet = versionDramatique.textecomplet;
+        // Si l'API retourne une erreur HTTP/Google, on l'affiche
+        if (geminiData.error) {
+          console.error("Erreur API Gemini :", JSON.stringify(geminiData.error));
+        } else {
+          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const versionDramatique = JSON.parse(rawText);
+            if (versionDramatique.titre && versionDramatique.textecomplet) {
+              formattedNews[0].titre = versionDramatique.titre;
+              formattedNews[0].textecomplet = versionDramatique.textecomplet;
+            }
           }
         }
       } catch (err) {
         console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
       }
     }
-
-    const newsBlob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
-      access: 'public',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      storeId: process.env.BLOB_STORE_ID
-    });
-
     // ==========================================
     // 2. TRAITEMENT DE LA MÉTÉO (Open-Meteo Paris)
     // ==========================================
