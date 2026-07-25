@@ -119,7 +119,6 @@ Exemple de format:
   "textecomplet": "..."
 }`;
 
-        // Utilisation du nom de modèle valide: gemini-1.5-flash
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
@@ -132,19 +131,16 @@ Exemple de format:
           }
         );
 
-        // On vérifie que la réponse est valide avant de la traiter
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) {
-            const versionDramatique = JSON.parse(rawText);
-            if (versionDramatique.titre && versionDramatique.textecomplet) {
-              formattedNews[0].titre = versionDramatique.titre;
-              formattedNews[0].textecomplet = versionDramatique.textecomplet;
-            }
+        const geminiData = await geminiRes.json();
+
+        if (geminiRes.ok && geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+          const versionDramatique = JSON.parse(geminiData.candidates[0].content.parts[0].text);
+          if (versionDramatique.titre && versionDramatique.textecomplet) {
+            formattedNews[0].titre = versionDramatique.titre;
+            formattedNews[0].textecomplet = versionDramatique.textecomplet;
           }
         } else {
-          console.error("Erreur API Gemini (non-200) :", geminiRes.statusText);
+          console.error("Réponse Gemini invalide ou erreur API :", JSON.stringify(geminiData));
         }
       } catch (err) {
         console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
