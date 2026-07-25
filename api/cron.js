@@ -41,6 +41,44 @@ const SIGNES_ASTRO = [
   { id: "poissons", nom: "Poissons", icone: "♓" }
 ];
 
+// Banque de phrases sur le ton "Véritude"
+const INTROS = [
+  "Sous l'impact d'une fluctuation quantique imprévue,",
+  "La réfraction de la lumière lunaire indique que",
+  "Selon les dernières mesures de pression atmosphérique,",
+  "En raison d'un alignement orbital statistiquement rare,",
+  "Les lois fondamentales de la thermodynamique confirment que",
+  "L'analyse spectrométrique du ciel suggère que",
+  "Face à la dérive inévitable des plaques tectoniques,",
+  "L'observation rigoureuse des isotopes spatiaux montre que"
+];
+
+const PREDICTIONS = [
+  "votre métabolisme va tenter de contourner la gravité.",
+  "une prise de décision irrationnelle augmentera votre productivité de 0.4%.",
+  "votre probabilité de renverser un liquide tiède approche les 89%.",
+  "les micro-ondes de votre environnement perturberont votre logique.",
+  "un pic de cortisol injustifié modifiera votre perception du temps.",
+  "votre organisme rejettera catégoriquement tout effort inutile.",
+  "votre niveau de patience atteindra un seuil critique avant midi.",
+  "une coïncidence mathématique pure va vous troubler inutilement."
+];
+
+const CONSEILS = [
+  "Évitez les objets angulaires et privilégiez l'eau tiède.",
+  "Consultez un baromètre avant de répondre à vos emails.",
+  "Ne faites confiance à aucun chiffre impair aujourd'hui.",
+  "Respirez en fréquence 432 Hz pour limiter les dégâts.",
+  "Marchez uniquement sur des surfaces planes jusqu'à nouvel ordre.",
+  "Appliquez le principe de précaution : ne faites rien.",
+  "Réduisez votre exposition aux opinions non vérifiées.",
+  "Gardez vos pieds en contact avec le sol."
+];
+
+function pickRandom(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
 export default async function handler(request, response) {
   // En-têtes CORS universels
   response.setHeader('Access-Control-Allow-Origin', '*');
@@ -101,64 +139,21 @@ export default async function handler(request, response) {
     });
 
     // ==========================================
-    // 3. TRAITEMENT DE L'HOROSCOPE (Via Gemini API)
+    // 3. TRAITEMENT DE L'HOROSCOPE (Générateur local "Véritude")
     // ==========================================
-    let horoscopePayload = {};
-
-    if (process.env.GEMINI_API_KEY) {
-      const promptText = `Génère l'horoscope du jour en français sous forme d'un objet JSON strict.
-Le JSON doit être un objet dont les clés sont : belier, taureau, gemeaux, cancer, lion, vierge, balance, scorpion, sagittaire, capricorne, verseau, poissons.
-Chaque valeur doit être une courte phrase bienveillante et divertissante (2 à 3 phrases max) décrivant leur journée.
-Réponds UNIQUEMENT avec le JSON, aucun autre texte. Exemple de format:
-{
-  "belier": "Une journée pleine d'énergie vous attend...",
-  "taureau": "Prenez le temps de vous poser..."
-}`;
-
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        }
-      );
-
-      const geminiData = await geminiRes.json();
-      const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-      const parsedHoroscopes = JSON.parse(rawText || '{}');
-
-      const signesFormatted = {};
-      SIGNES_ASTRO.forEach(s => {
-        signesFormatted[s.id] = {
-          signe: s.nom,
-          icone: s.icone,
-          texte: parsedHoroscopes[s.id] || "Journée sous le signe de la sérénité et des belles opportunités."
-        };
-      });
-
-      horoscopePayload = {
-        date: new Date().toISOString().split('T')[0],
-        signes: signesFormatted
+    const signesFormatted = {};
+    SIGNES_ASTRO.forEach(s => {
+      signesFormatted[s.id] = {
+        signe: s.nom,
+        icone: s.icone,
+        texte: `${pickRandom(INTROS)} ${pickRandom(PREDICTIONS)} ${pickRandom(CONSEILS)}`
       };
-    } else {
-      // Fallback si pas de clef API Gemini configurée
-      const signesFormatted = {};
-      SIGNES_ASTRO.forEach(s => {
-        signesFormatted[s.id] = {
-          signe: s.nom,
-          icone: s.icone,
-          texte: "Une journée équilibrée s'annonce. Profitez des moments simples et gardez le sourire."
-        };
-      });
-      horoscopePayload = {
-        date: new Date().toISOString().split('T')[0],
-        signes: signesFormatted
-      };
-    }
+    });
+
+    const horoscopePayload = {
+      date: new Date().toISOString().split('T')[0],
+      signes: signesFormatted
+    };
 
     const horoscopeBlob = await put('horoscope.json', JSON.stringify(horoscopePayload, null, 2), {
       access: 'public',
