@@ -101,7 +101,6 @@ export default async function handler(request, response) {
       textecomplet: item.contentSnippet || item.content || ''
     }));
 
-    // Diagnostic de la clé d'environnement
     if (!process.env.GEMINI_API_KEY) {
       console.error("GEMINI_API_KEY manquante dans les variables Vercel !");
     } else if (formattedNews.length > 0) {
@@ -120,9 +119,9 @@ Exemple de format:
   "textecomplet": "..."
 }`;
 
-        // Utilisation du modèle gemini-1.5-flash (nom stable universel)
+        // Endpoint stable Gemini 1.5 Flash
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -135,7 +134,6 @@ Exemple de format:
 
         const geminiData = await geminiRes.json();
 
-        // Si l'API retourne une erreur HTTP/Google, on l'affiche
         if (geminiData.error) {
           console.error("Erreur API Gemini :", JSON.stringify(geminiData.error));
         } else {
@@ -152,6 +150,15 @@ Exemple de format:
         console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
       }
     }
+
+    // Sauvegarde du Blob news.json (réintégrée ici)
+    const newsBlob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
+      access: 'public',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      storeId: process.env.BLOB_STORE_ID
+    });
+
     // ==========================================
     // 2. TRAITEMENT DE LA MÉTÉO (Open-Meteo Paris)
     // ==========================================
