@@ -91,15 +91,59 @@ export default async function handler(request, response) {
 
   try {
     // ==========================================
-    // 1. TRAITEMENT DES ACTUALITÉS (CNews)
+    // 1. TRAITEMENT DES ACTUALITÉS (CNews + Dramatisation du 1er article via Gemini)
     // ==========================================
     const feed = await parser.parseURL(RSS_URL);
-    
-    const formattedNews = feed.items.map((item, index) => ({
+
+    let formattedNews = feed.items.map((item, index) => ({
       id: (index + 1).toString(),
       titre: item.title || '',
       textecomplet: item.contentSnippet || item.content || ''
     }));
+
+    // Si la clé API Gemini est disponible et qu'il y a au moins un article
+    if (process.env.GEMINI_API_KEY && formattedNews.length > 0) {
+      try {
+        const premierArticle = formattedNews[0];
+        const promptText = `Réécris le titre et le texte suivant dans un style extrêmement dramatique, solennel, haletant et saisissant. 
+Conserve l'information d'origine, mais exagère le ton tragique et théâtral.
+
+Titre d'origine: ${premierArticle.titre}
+Texte d'origine: ${premierArticle.textecomplet}
+
+Réponds UNIQUEMENT sous la forme d'un objet JSON strict avec les clés "titre" et "textecomplet".
+Exemple de format:
+{
+  "titre": "...",
+  "textecomplet": "..."
+}`;
+
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          }
+        );
+
+        const geminiData = await geminiRes.json();
+        const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (rawText) {
+          const versionDramatique = JSON.parse(rawText);
+          if (versionDramatique.titre && versionDramatique.textecomplet) {
+            formattedNews[0].titre = versionDramatique.titre;
+            formattedNews[0].textecomplet = versionDramatique.textecomplet;
+          }
+        }
+      } catch (err) {
+        console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
+      }
+    }
 
     const newsBlob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
       access: 'public',
@@ -165,8 +209,8 @@ export default async function handler(request, response) {
     // ==========================================
     // 4. RÉPONSE FINALE
     // ==========================================
-    return response.status(200).json({ 
-      success: true, 
+    return response.status(200).json({
+      success: true,
       message: 'Actualités, Météo et Horoscope synchronisés avec succès !',
       newsUrl: newsBlob.url,
       meteoUrl: meteoBlob.url,
@@ -174,9 +218,9 @@ export default async function handler(request, response) {
     });
 
   } catch (error) {
-    return response.status(500).json({ 
-      success: false, 
-      error: error.message 
+    return response.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 }
