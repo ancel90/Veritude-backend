@@ -119,7 +119,7 @@ Exemple de format:
   "textecomplet": "..."
 }`;
 
-        // Endpoint stable Gemini 1.5 Flash
+        // Utilisation du nom de modèle valide: gemini-1.5-flash
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
@@ -132,11 +132,9 @@ Exemple de format:
           }
         );
 
-        const geminiData = await geminiRes.json();
-
-        if (geminiData.error) {
-          console.error("Erreur API Gemini :", JSON.stringify(geminiData.error));
-        } else {
+        // On vérifie que la réponse est valide avant de la traiter
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawText) {
             const versionDramatique = JSON.parse(rawText);
@@ -145,13 +143,15 @@ Exemple de format:
               formattedNews[0].textecomplet = versionDramatique.textecomplet;
             }
           }
+        } else {
+          console.error("Erreur API Gemini (non-200) :", geminiRes.statusText);
         }
       } catch (err) {
         console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
       }
     }
 
-    // Sauvegarde du Blob news.json (réintégrée ici)
+    // Sauvegarde du Blob news.json
     const newsBlob = await put('news.json', JSON.stringify(formattedNews, null, 2), {
       access: 'public',
       addRandomSuffix: false,
