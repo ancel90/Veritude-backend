@@ -140,7 +140,7 @@ Exemple de format:
             formattedNews[0].textecomplet = versionDramatique.textecomplet;
           }
         } else {
-          console.error("Réponse Gemini invalide ou erreur API :", JSON.stringify(geminiData));
+          console.error("ERREUR GEMINI BRUTE:", JSON.stringify(geminiData, null, 2));
         }
       } catch (err) {
         console.error("Erreur lors de la dramatisation de l'article par Gemini:", err);
